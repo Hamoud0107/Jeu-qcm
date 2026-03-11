@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لعبة مراجعة QCM</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #f6f8fb;
+  margin: 0;
+  padding: 0;
+  color: #1f2937;
+}
+.container {
+  max-width: 850px;
+  margin: 24px auto;
+  background: white;
+  border-radius: 18px;
+  box-shadow: 0 8px 30px rgba(0,0,0,.08);
+  padding: 24px;
+}
+h1 { margin-top: 0; }
+.muted { color: #6b7280; }
+.controls {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0 22px;
+}
+button {
+  border: 0;
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 16px;
+  cursor: pointer;
+}
+.primary { background: #2563eb; color: white; }
+.secondary { background: #e5e7eb; color: #111827; }
+.option {
+  display: block;
+  width: 100%;
+  text-align: right;
+  margin: 10px 0;
+  padding: 14px 16px;
+  border: 2px solid #e5e7eb;
+  background: white;
+}
+.option:hover { border-color: #93c5fd; }
+.option.correct { background: #ecfdf5; border-color: #10b981; }
+.option.wrong { background: #fef2f2; border-color: #ef4444; }
+.card {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  padding: 18px;
+  margin-top: 16px;
+}
+.hidden { display:none; }
+.progress {
+  height: 10px;
+  background: #e5e7eb;
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 12px 0 18px;
+}
+.bar {
+  height: 100%;
+  background: #2563eb;
+  width: 0%;
+  transition: width .25s;
+}
+.badge {
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background:#eff6ff;
+  color:#1d4ed8;
+  font-size:14px;
+}
+.small { font-size:14px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>لعبة مراجعة الامتحان QCM</h1>
+  <p class="muted">اختر وضع اللعب ثم ابدأ. الأسئلة بالفرنسية والإجابات تظهر فورًا لمساعدتك على المراجعة.</p>
+
+  <div id="startScreen">
+    <div class="card">
+      <div class="controls">
+        <button class="primary" onclick="startGame('all')">ابدأ كل الأسئلة</button>
+        <button class="secondary" onclick="startGame('random10')">10 أسئلة عشوائية</button>
+        <button class="secondary" onclick="startGame('random20')">20 سؤالًا عشوائيًا</button>
+      </div>
+      <p class="small">عدد الأسئلة المتوفرة: <strong>39</strong></p>
+      <p class="small">ملاحظة: السؤال Q23 غير متوفر لأنه لم يظهر في الصور.</p>
+    </div>
+  </div>
+
+  <div id="gameScreen" class="hidden">
+    <div class="badge" id="counter"></div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="card">
+      <h2 id="questionText"></h2>
+      <div id="optionsBox"></div>
+      <p id="feedback" class="small"></p>
+      <div class="controls">
+        <button id="nextBtn" class="primary hidden" onclick="nextQuestion()">السؤال التالي</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="resultScreen" class="hidden">
+    <div class="card">
+      <h2>النتيجة النهائية</h2>
+      <p id="scoreText"></p>
+      <p id="scoreMsg" class="muted"></p>
+      <div class="controls">
+        <button class="primary" onclick="restart()">إعادة اللعب</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const fullQuestions = [{"q": "Q1. Une anémie avec VGM élevé et hypersegmentation des neutrophiles évoque :", "options": ["A) Carence en fer", "B) Carence en vitamine B12", "C) Infection bactérienne", "D) Hémorragie aiguë"], "answer": 1}, {"q": "Q2. Un taux de réticulocytes élevé indique :", "options": ["A) Défaut production médullaire", "B) Régénération médullaire", "C) Infection virale", "D) Carence B12"], "answer": 1}, {"q": "Q3. Une leucopénie est définie par GB :", "options": ["A) < 4 000/mm³", "B) > 10 000/mm³", "C) > 15 000/mm³", "D) < 15 000/mm³"], "answer": 0}, {"q": "Q4. Le TCA explore :", "options": ["A) Voie extrinsèque", "B) Voie intrinsèque", "C) Fonction hépatique", "D) Fonction rénale"], "answer": 1}, {"q": "Q5. Une thrombocytose peut augmenter le risque de :", "options": ["A) Hémorragie", "B) Thrombose", "C) Anémie", "D) Infection"], "answer": 1}, {"q": "Q6. Une augmentation de la LDH peut indiquer :", "options": ["A) Hémolyse", "B) Hypoglycémie", "C) Insuffisance rénale", "D) Hypernatrémie"], "answer": 0}, {"q": "Q7. L’insuffisance rénale chronique entraîne souvent :", "options": ["A) Hypercalcémie", "B) Hypokaliémie", "C) Hyperkaliémie", "D) Hypoglycémie"], "answer": 2}, {"q": "Q8. Le marqueur principal de l’infarctus myocardique est :", "options": ["A) ALAT", "B) CRP", "C) Troponine", "D) Urée"], "answer": 2}, {"q": "Q9. Une acidose métabolique peut être causée par :", "options": ["A) Vomissements", "B) Insuffisance rénale", "C) Hyperventilation", "D) Anémie"], "answer": 1}, {"q": "Q10. L’hypoalbuminémie provoque :", "options": ["A) Œdèmes", "B) Hyperglycémie", "C) Leucocytose", "D) Hyperkaliémie"], "answer": 0}, {"q": "Q11. Une bactérie anaérobie stricte :", "options": ["A) Vit avec oxygène", "B) Meurt en présence d’oxygène", "C) Est un virus", "D) Est un parasite"], "answer": 1}, {"q": "Q12. Le test catalase différencie :", "options": ["A) Virus/Bactéries", "B) Streptococcus/Staphylococcus", "C) Gram + / Gram –", "D) Parasite/Champignon"], "answer": 1}, {"q": "Q13. La résistance aux bêta-lactamines est souvent due à :", "options": ["A) Mutation ADN viral", "B) Bêta-lactamase", "C) Déficit immunitaire", "D) Hyperglycémie"], "answer": 1}, {"q": "Q14. La tuberculose est causée par :", "options": ["A) Virus", "B) Champignon", "C) Mycobacterium tuberculosis", "D) Parasite"], "answer": 2}, {"q": "Q15. Une parasitémie palustre se diagnostique par :", "options": ["A) Hémoculture", "B) Frottis sanguin", "C) ELISA", "D) Antibiogramme"], "answer": 1}, {"q": "Q16. Les lymphocytes T CD8 sont responsables :", "options": ["A) Production anticorps", "B) Cytotoxicité", "C) Phagocytose", "D) Coagulation"], "answer": 1}, {"q": "Q17. Une réaction antigène-anticorps forme :", "options": ["A) Complexe immun", "B) Virus", "C) Enzyme", "D) Hormone"], "answer": 0}, {"q": "Q18. Le test ELISA indirect détecte :", "options": ["A) Antigène", "B) Anticorps", "C) Glucose", "D) Urée"], "answer": 1}, {"q": "Q19. La phase S du cycle cellulaire correspond à :", "options": ["A) Division", "B) Synthèse ADN", "C) Croissance", "D) Mitose"], "answer": 1}, {"q": "Q20. Les mitochondries produisent :", "options": ["A) ADN", "B) ATP", "C) Protéines", "D) Lipides"], "answer": 1}, {"q": "Q21. Une maladie liée à l’X touche plus :", "options": ["A) Femmes", "B) Hommes", "C) Les deux également", "D) Personne"], "answer": 1}, {"q": "Q22. La mutation ponctuelle affecte :", "options": ["A) Chromosome entier", "B) Un seul nucléotide", "C) Deux chromosomes", "D) Mitose"], "answer": 1}, {"q": "Q24. Le port de masque est obligatoire lors :", "options": ["A) Analyse administrative", "B) Manipulation échantillon suspect", "C) Pause", "D) Nettoyage bureau"], "answer": 1}, {"q": "Q25. Hb basse + Ferritine basse :", "options": ["A) Anémie inflammatoire", "B) Anémie ferriprive", "C) Leucémie", "D) Thalassémie"], "answer": 1}, {"q": "Q26. HbA1c = 9% :", "options": ["A) Diabète mal contrôlé", "B) Normal", "C) Hypoglycémie", "D) Infection"], "answer": 0}, {"q": "Q27. GB = 2 000/mm³ :", "options": ["A) Normal", "B) Leucocytose", "C) Leucopénie", "D) Anémie"], "answer": 2}, {"q": "Q28. Plaquettes = 600 G/L :", "options": ["A) Thrombocytose", "B) Thrombopénie", "C) Normal", "D) Leucémie"], "answer": 0}, {"q": "Q29. Créatinine + urée élevées :", "options": ["A) Insuffisance rénale", "B) Hépatite", "C) Anémie", "D) Infection pulmonaire"], "answer": 0}, {"q": "Q30. CRP normale + VS élevée :", "options": ["A) Infection aiguë", "B) Inflammation chronique", "C) Diabète", "D) Anémie ferriprive"], "answer": 1}, {"q": "Q31. Hyperglycémie + cétonurie :", "options": ["A) Acidocétose diabétique", "B) Anémie", "C) Infection", "D) Hépatite"], "answer": 0}, {"q": "Q32. ASAT > ALAT (ratio >2) évoque souvent :", "options": ["A) Hépatite virale", "B) Hépatopathie alcoolique", "C) Insuffisance rénale", "D) Diabète"], "answer": 1}, {"q": "Q33. Une hémolyse augmente :", "options": ["A) Bilirubine indirecte", "B) Glycémie", "C) Sodium", "D) Albumine"], "answer": 0}, {"q": "Q34. Une hypercalcémie peut être liée à :", "options": ["A) Hyperparathyroïdie", "B) Anémie", "C) Infection", "D) Hypoglycémie"], "answer": 0}, {"q": "Q35. Une infection bactérienne aiguë augmente surtout :", "options": ["A) Lymphocytes", "B) Neutrophiles", "C) Plaquettes", "D) GR"], "answer": 1}, {"q": "Q36. Le choc septique est dû à :", "options": ["A) Infection sévère", "B) Hypoglycémie", "C) Anémie", "D) Hépatite"], "answer": 0}, {"q": "Q37. L’hépatite B se transmet par :", "options": ["A) Air", "B) Eau", "C) Sang", "D) Aliments"], "answer": 2}, {"q": "Q38. La PCR en biologie moléculaire sert à :", "options": ["A) Mesurer Hb", "B) Amplifier ADN", "C) Dosage glucose", "D) Culture bactérienne"], "answer": 1}, {"q": "Q39. Une hypoalbuminémie sévère provoque :", "options": ["A) Hypertension", "B) Œdèmes généralisés", "C) Leucocytose", "D) Hyperglycémie"], "answer": 1}, {"q": "Q40. La valeur normale plaquettes :", "options": ["A) 50–100 G/L", "B) 100–150 G/L", "C) 150–400 G/L", "D) 400–700 G/L"], "answer": 2}];
+let gameQuestions = [];
+let currentIndex = 0;
+let score = 0;
+let locked = false;
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startGame(mode) {
+  if (mode === 'all') gameQuestions = [...fullQuestions];
+  if (mode === 'random10') gameQuestions = shuffle(fullQuestions).slice(0, 10);
+  if (mode === 'random20') gameQuestions = shuffle(fullQuestions).slice(0, 20);
+
+  currentIndex = 0;
+  score = 0;
+  locked = false;
+
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('resultScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+
+  renderQuestion();
+}
+
+function renderQuestion() {
+  locked = false;
+  document.getElementById('feedback').textContent = '';
+  document.getElementById('nextBtn').classList.add('hidden');
+
+  const q = gameQuestions[currentIndex];
+  document.getElementById('questionText').textContent = q.q;
+  document.getElementById('counter').textContent = 'السؤال ' + (currentIndex + 1) + ' من ' + gameQuestions.length;
+  document.getElementById('bar').style.width = ((currentIndex) / gameQuestions.length) * 100 + '%';
+
+  const box = document.getElementById('optionsBox');
+  box.innerHTML = '';
+
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'option';
+    btn.textContent = opt;
+    btn.onclick = () => chooseAnswer(i, btn);
+    box.appendChild(btn);
+  });
+}
+
+function chooseAnswer(i, btn) {
+  if (locked) return;
+  locked = true;
+
+  const q = gameQuestions[currentIndex];
+  const buttons = [...document.querySelectorAll('.option')];
+
+  buttons[q.answer].classList.add('correct');
+
+  if (i === q.answer) {
+    score++;
+    document.getElementById('feedback').textContent = 'إجابة صحيحة ✅';
+  } else {
+    btn.classList.add('wrong');
+    document.getElementById('feedback').textContent = 'إجابة خاطئة ❌';
+  }
+
+  document.getElementById('nextBtn').classList.remove('hidden');
+  document.getElementById('bar').style.width = ((currentIndex + 1) / gameQuestions.length) * 100 + '%';
+}
+
+function nextQuestion() {
+  currentIndex++;
+  if (currentIndex >= gameQuestions.length) {
+    showResults();
+  } else {
+    renderQuestion();
+  }
+}
+
+function showResults() {
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('resultScreen').classList.remove('hidden');
+  const total = gameQuestions.length;
+  const pct = Math.round((score / total) * 100);
+  document.getElementById('scoreText').textContent = 'أجبت بشكل صحيح على ' + score + ' من ' + total + ' (' + pct + '%)';
+  let msg = 'واصل المراجعة.';
+  if (pct >= 85) msg = 'ممتاز جدًا 👏';
+  else if (pct >= 65) msg = 'جيد جدًا، بقي القليل.';
+  else if (pct >= 50) msg = 'مستوى متوسط، أعد اللعب لتحسن النتيجة.';
+  document.getElementById('scoreMsg').textContent = msg;
+}
+
+function restart() {
+  document.getElementById('resultScreen').classList.add('hidden');
+  document.getElementById('startScreen').classList.remove('hidden');
+}
+</script>
+</body>
+</html>
